@@ -12,14 +12,34 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
  * GLOBAL STYLES
  *********************************************/
 :root {
-  --r-background-color: #fff;
+  /* Primary colours */
+  --bgs-primary-earth: #002e40;
+  --bgs-primary-stone: #ad9c70;
+  --bgs-primary-white: #ffffff;
+  --bgs-primary-black: #000000;
+
+  /* Secondary colours */
+  --bgs-secondary-lichen: #99b096;
+  --bgs-secondary-sky: #7391bf;
+  --bgs-secondary-sea: #528791;
+  --bgs-secondary-grass: #8cb052;
+  --bgs-secondary-haze: #d48080;
+  --bgs-secondary-clay: #b87d33;
+  --bgs-secondary-amber: #f0a845;
+  --bgs-secondary-sand: #c4bd9c;
+  --bgs-secondary-rock: #a8a8a1;
+  --bgs-secondary-earth: #998a82;
+  --bgs-secondary-slate: #808082;
+
+  /* Reveal settings */
+  --r-background-color: var(--bgs-primary-white);
   --r-main-font: Source Sans Pro, Helvetica, sans-serif;
   --r-main-font-size: 42px;
-  --r-main-color: #002e40;
+  --r-main-color: var(--bgs-primary-earth);
   --r-block-margin: 20px;
   --r-heading-margin: 0 0 20px 0;
   --r-heading-font: Source Sans Pro, Helvetica, sans-serif;
-  --r-heading-color: #000;
+  --r-heading-color: var(--bgs-primary-black);
   --r-heading-line-height: 1.2;
   --r-heading-letter-spacing: normal;
   --r-heading-text-transform: uppercase;
@@ -31,11 +51,11 @@ section.has-dark-background, section.has-dark-background h1, section.has-dark-ba
   --r-heading3-size: 1.3em;
   --r-heading4-size: 1em;
   --r-code-font: monospace;
-  --r-link-color: #ad9c70;
-  --r-link-color-dark: #528791;
-  --r-link-color-hover: #587d33;
-  --r-selection-background-color: #d48080;
-  --r-selection-color: #fff;
+  --r-link-color: var(--bgs-secondary-earth);
+  --r-link-color-dark: var(--bgs-secondary-sea);
+  --r-link-color-hover: var(--bgs-secondary-clay);
+  --r-selection-background-color: var(--bgs-secondary-haze);
+  --r-selection-color: var(--bgs-primary-white);
 }
 
 .reveal-viewport {
