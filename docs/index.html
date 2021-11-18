@@ -6,7 +6,7 @@
 		<meta name="description" content="Presentation slides for PostgreSQL Build, December 2021">
 		<meta name="author" content="Dr John A Stevenson">
 
-		<title>An infrastructure-as-code approach to PostgreSQL-backed IoT sensor data sharing</title>
+		<title>How many Postgres is too many?</title>
 
 		<link rel="stylesheet" href="dist/reset.css">
 		<link rel="stylesheet" href="dist/reveal.css">
@@ -18,219 +18,121 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>
-						<h4>How many Postgres is too many?</h4>
-						<p><span class="small">An infrastructure-as-code approach to PostgreSQL-backed IoT sensor data sharing</span></p>
-						<p>
-						<span class="small"><a href="https://twitter.com/volcan01010">Dr John A Stevenson</a> / <a href="https://twitter.com/volcan01010">@volcan01010</a></span>
-						</p>
-						<a href="https://www.bgs.ac.uk"><img src="https://resources.bgs.ac.uk/images/BGS-Logo-Pos-RGB.svg" width=400 style="background:white; border:15px solid white; box-shadow:none;"></a>
-					<aside data-markdown class="notes">
-						Talk aims to share experience of using multiple PostgreSQL servers at BGS.
-					</aside>
-				</section>
+<section>
+	<section>
+		<h4>How many Postgres is too many?</h4>
+		<p><span class="small">An infrastructure-as-code approach to PostgreSQL-backed IoT sensor data sharing</span></p>
+		<p>
+		<span class="small"><a href="https://twitter.com/volcan01010">Dr John A Stevenson</a> / <a href="https://twitter.com/volcan01010">@volcan01010</a></span>
+		</p>
+		<a href="https://www.bgs.ac.uk"><img src="https://resources.bgs.ac.uk/images/BGS-Logo-Pos-RGB.svg" width=400 style="background:white; border:15px solid white; box-shadow:none;"></a>
+		<aside data-markdown class="notes">
+		The aim of this talk is to describe architecture of BGS Sensor Data Service and some of the features/tools that we used to create it.
+		</aside>
+	</section>
+	<section data-markdown>
+		+ Background
+		+ Single server configuration
+		+ Multi-environments and replication
+		+ Questions
+		<aside data-markdown class="notes">
+		The aim of this talk is to describe architecture of BGS Sensor Data Service and some of the features/tools that we used to create it.
+		</aside>
+	</section>
+</section>
 
-				<section>
-					<section>
-						<h4>About BGS</h4>
-						<blockquote>"Our mission is to provide impartial and independent geoscience advice and data."</blockquote>
-						<ul>
-						<li>Work with academics, governments, industry and the public</li>
-						<li>Digital division has 10 years of making digital data available e.g. via <a href="http://onegeology.org/">OneGeology</a> and <a href="https://www.bgs.ac.uk/geological-data/opengeoscience/">OpenGeoscience Portal</a>
-						and contributions to standards for data sharing e.g. <a href="https://www.bgs.ac.uk/news/geosciml-data-standard-becomes-official/">GeoSciML</a></li>
-						</ul>
-					<aside data-markdown class="notes">
-						650 staff, 70 in Digital are professional software developers and database experts.
-					</aside>
-					</section>
-					<section>
-						<h4>Headwinds</h4>
+<section>
+	<section>
+		<h4>About BGS</h4>
+		<blockquote>"Our mission is to provide impartial and independent geoscience advice and data."</blockquote>
+		<ul>
+		<li>Work with academics, governments, industry and the public</li>
+		<li>Digital division has 10 years of making digital data available e.g. via <a href="http://onegeology.org/">OneGeology</a> and <a href="https://www.bgs.ac.uk/geological-data/opengeoscience/">OpenGeoscience Portal</a>
+		and contributions to standards for data sharing e.g. <a href="https://www.bgs.ac.uk/news/geosciml-data-standard-becomes-official/">GeoSciML</a></li>
+		</ul>
+	<aside data-markdown class="notes">
+		650 staff, 70 in Digital are professional software developers and database experts.
+	</aside>
+	</section>
 
-						<p>Going open is <i>hindered</i> by: previous investment and
-						skills in proprietary technology; siloed confidential data; and
-						requirements of security standard certifications.</p>
-					<aside data-markdown class="notes">
-						Supply chain attacks injecting Bitcoin miners or ransomware are a worry.
-					</aside>
-					</section>
-					<section>
-						<h4>Tailwinds</h4>
+	<section>
+		<h4>BGS IT Infrastructure</h4>
 
-						<p>Going open is <i>helped</i> by: projects with external partners;
-						scientists adopting reproducible workflows; and supportive senior management.</p>
-					<aside data-markdown class="notes">
-						Change comes from the senior developer level as they are using the code day-to-day.
-						BGS hired senior developers with explicit interest in open source software.
-					</aside>
-					</section>
-					<section data-transition="fade-out" data-background-size="contain" data-background="images/001_just_postgres.png">
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					</section>
-					<section data-transition="fade-in" data-background-size="contain" data-background="images/002_single_vm.png">
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					</section>
+		<p>Self-hosted</p>
+	<aside data-markdown class="notes">
+		Supply chain attacks injecting Bitcoin miners or ransomware are a worry.
+	</aside>
+	</section>
 
-					<section data-transition="fade-in" data-background-size="contain" data-background="images/003_single_vm_and_etl.png">
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					</section>
-					<section data-transition="fade-in" data-background-size="contain" data-background="images/004_add_environments.png">
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					<section data-transition="fade-in" data-background-size="contain" data-background="images/005_integration_test.png">
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					</section>
-					<section data-transition="fade-in" data-background-size="contain" data-background="images/006_add_replication.png">
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					</section>
-					<section data-transition="fade-in" data-background-size="contain" data-background="images/007_replication_test.png">
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					</section>
-				</section>
+	<section>
+		<h4>UKGEOS</h4>
 
-				<section>
-					<section data-transition="fade-out">
-						<h4>Two dimensions of Coding in the Open</h4>
-						<img class="stretch" src="images/001_just_postgres.png">
+	<aside data-markdown class="notes">
+		Change comes from the senior developer level as they are using the code day-to-day.
+		BGS hired senior developers with explicit interest in open source software.
+	</aside>
+	</section>
 
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					</section>
-					<section data-transition="fade-in">
-						<h4>Two dimensions of Coding in the Open</h4>
-						<img class="stretch" src="images/002_single_vm.png">
-					</section>
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
+	<section>
+		<h4>FROST Server</h4>
 
-					<section data-transition="fade-in">
-						<h4>Two dimensions of Coding in the Open</h4>
-						<img class="stretch" src="images/003_single_vm_and_etl.png">
-					</section>
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					<section data-transition="fade-in">
-						<h4>Two dimensions of Coding in the Open</h4>
-						<img class="stretch" src="images/004_add_environments.png">
-					</section>
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					<section data-transition="fade-in">
-						<h4>Two dimensions of Coding in the Open</h4>
-						<img class="stretch" src="images/005_integration_test.png">
-					</section>
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					<section data-transition="fade-in">
-						<h4>Two dimensions of Coding in the Open</h4>
-						<img class="stretch" src="images/006_add_replication.png">
-					</section>
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					<section data-transition="fade-in">
-						<h4>Two dimensions of Coding in the Open</h4>
-						<img class="stretch" src="images/007_replication_test.png">
-					</section>
-					<aside data-markdown class="notes">
-						[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
-					</aside>
-					<section>
-					</section>
-						<h4>Timeline of collaborative software development training</h4>
-						<ul>
-						<li><i>2016-03:</i> Installation of on-premises GitLab server</li>
-						<li><i>2016-10:</i> Git training</li>
-						<li><i>2018-08:</i> Python Clinics</li>
-						<li><i>2019-05:</i> GitLab Project Management training</li>
-						<li><i>2019-07:</i> Introduction to Python training</li>
-						<li><i>2020-04:</i> Python Improvers training</li>
-						</ul>
-					</section>
-					<aside data-markdown class="notes">
-						Git and Python courses based on [Software Carpentry](https://software-carpentry.org).
-					</aside>
+	<aside data-markdown class="notes">
+		Change comes from the senior developer level as they are using the code day-to-day.
+		BGS hired senior developers with explicit interest in open source software.
+	</aside>
+	</section>
+</section>
 
-					<section>
-						<h4>Proprietary tools + internal code</h4>
-						<img class="stretch" src="images/open_code_has_two_dimensions_1.svg">
-					</section>
+<section>
+	<section data-background-size="contain" data-background="images/001_just_postgres.png">
+	<aside data-markdown class="notes">
+		[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
+	</aside>
+	</section>
 
-					<section>
-						<h4>Timeline of corporate buy-in to open source</h4>
-						<ul>
-						<li><i>2017-02:</i> Separate network area for developers</li>
-						<li><i>2018-09:</i> GitLab Enterprise Edition funded</li>
-						<li><i>2019-07:</i> <a href=" https://youtu.be/I0_XuyVNBeI">Open and Reproducible Science keynote</a> at Digital Workshop</li>
-						<li><i>2019-09:</i> Silver sponsor FOSS4G UK conference</li>
-						<li><i>2020-07:</i> BGS Digital Strategy includes "Collaborative, open and reproducible research"</li>
-						<li><i>2020-09:</i> Nexus Firewall server approved (pending funding)</li>
-						</ul>
-					</section>
+	<section data-transition="fade-in" data-background-size="contain" data-background="images/002_single_vm.png">
+	<aside data-markdown class="notes">
+	</aside>
+	</section>
 
-					<section>
-						<h4>Open Source software + internal code</h4>
-						<img class="stretch" src="images/open_code_has_two_dimensions_2.svg">
-					</section>
+	<section data-transition="fade-in" data-background-size="contain" data-background="images/003_single_vm_and_etl.png">
+	<aside data-markdown class="notes">
+	</aside>
+	</section>
+</section>
 
-					<section>
-						<h4>Timeline of open code releases</h4>
-						<ul>
-						<li><i>2011-02:</i> Add INSPIRE capabilities to MapServer</li>
-						<li><i>2013-09:</i> First pull request to GeoServer</li>
-						<li><i>2018-07:</i> Launch of <a href="github.com/BritishGeologicalSurvey">github.com/BritishGeologicalSurvey</a></li>
-						<li><i>2019-03:</i> <a href="https://github.com/BritishGeologicalSurvey/O1362-observations">Viewing geotagged photos in QGIS</a> - how to</li>
-						<li><i>2019-09:</i> <a href="https://github.com/BritishGeologicalSurvey/etlhelper">ETL Helper</a> - data transfer tool</li>
-						<li><i>2019-10:</i> <a href="https://github.com/BritishGeologicalSurvey/geo-ner-model">Geo NER Model</a> - machine learning model</li>
-						<li><i>2020-01:</i> <a href="https://github.com/BritishGeologicalSurvey/disolv">DISOLV</a> - groundwater modelling tool</li>
-						<li><i>2020-10:</i> <a href="https://github.com/BritishGeologicalSurvey/stratigraph">Stratigraph</a> - relative rock ages from text</li>
-						</ul>
-					</section>
+<section>
+	<section data-transition="fade-in" data-background-size="contain" data-background="images/004_add_environments.png">
+	<aside data-markdown class="notes">
+	</aside>
+	</section>
 
-					<section>
-						<h4>Open Source software + open code</h4>
-						<img class="stretch" src="images/open_code_has_two_dimensions_3.svg">
-					</section>
-				</section>
+	<section data-transition="fade-in" data-background-size="contain" data-background="images/005_integration_test.png">
+	<aside data-markdown class="notes">
+	</aside>
+	</section>
+	
+	<section data-transition="fade-in" data-background-size="contain" data-background="images/006_add_replication.png">
+	<aside data-markdown class="notes">
+	</aside>
+	</section>
 
-				<section>
-					<section data-transition="slide-in fade-out">
-						<h4>Conclusion</h4>
-						<ul>
-						<li>Git training</li>
-						<li>Git training</li>
-						<li>Git training</li>
-						<li>Git training</li>
-						</ul>
-					</section>
-					<section data-transition="fade-in slide-out">
-						<h4>Conclusion</h4>
-						<ul>
-						<li>Git and coding training <i>and</i> pair programming</li>
-						<li>Listen to security concerns and mitigate them</li>
-						<li>Try open source on independent projects first</li>
-						<li>Extract common code into open reusable libraries</li>
-						</ul>
-					</section>
-				</section>
-			</div>
+	<section data-transition="fade-in" data-background-size="contain" data-background="images/007_replication_test.png">
+	<aside data-markdown class="notes">
+	</aside>
+	</section>
+</section>
+
+<section>
+	<section>
+	Lessons learned
+	</section>
+	<section>
+	Questions
+	</section>
+</section>
+
+	</div>
 		</div>
 
 		<script src="dist/reveal.js"></script>
