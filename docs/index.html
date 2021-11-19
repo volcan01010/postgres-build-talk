@@ -33,11 +33,14 @@
 		Don't worry if you don't understand them; I'll explain what each does and the most important thing is to get a sense of how these systems are configured.
 		</aside>
 	</section>
-	<section data-markdown>
-		+ Background
-		+ Single server configuration
-		+ Multi-environments and replication
-		+ Questions for discussion
+	<section>
+		<h4>Talk outline</h4>
+		<ul>
+		<li>Background</li>
+		<li>Single server configuration</li>
+		<li>Multi-environments and replication</li>
+		<li>Questions for discussion</li>
+		</ul>
 	<aside data-markdown class="notes">
 		Our approach is different to the cloud-native, Kubernetes-based setups described in the other talks.
 		Hopefully there will time for feedback and discussion at the end.
@@ -105,7 +108,9 @@
 	<section data-background-size="contain" data-background="images/001_just_postgres.png">
 	<aside data-markdown class="notes">
 		This is a PostgreSQL conference, so we should centre the talk around PostgreSQL.
+
 		Here is a single PostgreSQL database.
+
 		I like it because it is easy to create many instances, which gives flexiblity and scope for test environments.
 		You will see this as the talk goes on.
 	</aside>
@@ -271,7 +276,7 @@ exec $cmd
 	<aside data-markdown class="notes">
 		`etlhelper` is aimed at anyone who just wants to run a SQL query against a database and insert the results into another one.
 
-		In the example above, it copies the data from the "src" table on "conn1" to the "exported" table on "conn2".
+		In the example above, `etlhelper` copies the data from the "src" table on "conn1" to the "exported" table on "conn2".
 		Behind the scenes it handles things like cursors and transactions and transferring the data in chunks so that it doesn't take up too much space in memory.
 
 		We open-sourced `etlhelper` two years ago, so you can look it up on GitHub and install it using `pip`.
@@ -293,7 +298,8 @@ exec $cmd
 		We use GitLab CI to run the deployment scripts.
 
 		The Development environment allows us to experiment with ETL and server configuration without modifying the Internal server.
-		We now have 2 PostgreSQL databases.
+
+		We now have 2 PostgreSQLs.
 	</aside>
 	</section>
 
