@@ -27,7 +27,7 @@
 		</p>
 		<a href="https://www.bgs.ac.uk"><img src="images/BGS-Logo-Pos-RGB.svg" width=400 style="background:white; border:15px solid white; box-shadow:none;"></a>
 		<aside data-markdown class="notes">
-		The aim of this talk is to describe architecture of BGS Sensor Data Service, the tools that we used to create it and some hopefully helpful hints that we learned in the process.
+		The aim of this talk is to describe the architecture of BGS Sensor Data Service, the tools that we used to create it and some (hopefully helpful) hints that we learned in the process.
 		</aside>
 	</section>
 	<section data-markdown>
@@ -35,11 +35,11 @@
 		+ Single server configuration
 		+ Multi-environments and replication
 		+ Questions for discussion
-	</section>
-		<aside data-markdown class="notes">
+	<aside data-markdown class="notes">
 		Our approach is different to the cloud-native, Kubernetes-based setups described in the other talks.
-		Hopefully there will time for feedback and discussion on it at the end.
-		</aside>
+		Hopefully there will time for feedback and discussion at the end.
+	</aside>
+	</section>
 </section>
 
 <section>
@@ -53,7 +53,7 @@
 		</ul>
 	<aside data-markdown class="notes">
 		We have 650 staff, 70 in Digital are professional software developers and database experts.
-		This service is part of our recent approach of increasingly sharing data via APIs.
+		This sensor data service described here is part of our recent approach of increasingly sharing data via APIs.
 	</aside>
 	</section>
 
@@ -66,7 +66,7 @@
 		</ul>
 	<aside data-markdown class="notes">
 		Self-hosting our VMs means that we do not pay per minute; it is not expensive to run multiple servers with low loads.
-		Microservices often bring their own PostgreSQL databases as part of the software stack.
+		Microservices often include their own PostgreSQL databases as part of the software stack.
 		If we use PostgreSQL, we can share workflows with partners in academia or countries such as Kyrgyzstan and Uganda.
 	</aside>
 	</section>
@@ -101,6 +101,7 @@
 	<section data-background-size="contain" data-background="images/001_just_postgres.png">
 	<aside data-markdown class="notes">
 		This is a PostgreSQL conference, so we should centre the talk around PostgreSQL.
+		Here is a single PostgreSQL database.
 		I like it because it is easy to create many instances, which gives flexiblity and scope for test environments.
 		You will see this as the talk goes on.
 	</aside>
@@ -127,7 +128,7 @@
 	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/002_single_vm.png">
 	<aside data-markdown class="notes">
-		The runner services comprises a PostgreSQL database and FROST-Server instance running on a virtual machine.
+		The API services comprise a PostgreSQL database and FROST-Server running on a virtual machine.
 		We use docker-compose to start the services together.
 		FROST-Server connects to the database and creates the tables that it needs using Liquibase.
 	</aside>
@@ -165,7 +166,9 @@ volumes:
 		docker-compose.yml
 	<aside data-markdown class="notes">
 		The docker-compose file describes the database (db) and FROST services.
+
 		For the database, note the environment variables used to configure the superuser account and the volume to ensure that data persist.
+
 		For the FROST Server, note the same credentials and the custom command to run when the container starts.
 		This command ensures that the database is ready before FROST tries to create the tables.
 	</aside>
@@ -226,14 +229,14 @@ exec $cmd
 	<aside data-markdown class="notes">
 		We use Ansible to deploy the application and database to the server.
 		Ansible is a server-configuration tool that can SSH onto a target machine and run scripts there.
-		The scripts are declarative, so they define the end state rather than the stops to get there.
+		The scripts are declarative, so they define the end state rather than the steps to get there.
 		They are also idempotent, which means they can be run repeatedly and always give the same result.
 
 		The scripts copy across the `docker-compose.yml` file and create a `.env` file containing the environment variables.
 		They then call `docker-compose up` to start the service.
 
 		We have an extra step to reset the database, which can be triggered via an environment variable.
-		This will drop the data volume and give us a fresh start when the service starts.
+		This will drop the data volume and give us a fresh database when the service restarts.
 	</aside>
 	</section>
 
@@ -263,24 +266,46 @@ exec $cmd
 		<a href="https://github.com/BritishGeologicalSurvey/etlhelper">https://github.com/BritishGeologicalSurvey/etlhelper</a>
 	<aside data-markdown class="notes">
 		`etlhelper` is aimed at anyone who just wants to run a SQL query against a database and insert the results into another one.
+
 		In the example above, it copies the data from the "src" table on "conn1" to the "exported" table on "conn2".
 		Behind the scenes it handles things like cursors and transactions and transferring the data in chunks so that it doesn't take up too much space in memory.
-		We open-sourced `etlhelper` two years ago, so you can look at it on GitHub and install it using `pip`.
+
+		We open-sourced `etlhelper` two years ago, so you can look it up on GitHub and install it using `pip`.
+		Please "star" the repo if it is useful to you.
 	</aside>
 	</section>
 </section>
 
 <section>
 	<section data-background-size="contain" data-background="images/003_single_vm_and_etl.png">
+	<aside data-markdown class="notes">
+		Once we have our pipeline working, it's time to create some environments.
+	</aside>
 	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/004_add_environments.png">
 	<aside data-markdown class="notes">
+		Ansible will apply configuration to servers listed in the `hosts.yml` file.
+		To create a new environment is simply a case of starting a server and adding it to the list with appropriate settings for the environment variables.
+		We use GitLab CI to run the deployment scripts.
+
+		The Development environment allows us to experiment with ETL and server configuration without modifying the Internal server.
+		We now have 2 PostgreSQL databases.
 	</aside>
 	</section>
 
 	<section>
 		<img class="stretch" src="images/pglog_table_screenshot.png">
 		Logs exported as CSV can be queried as a foreign table
+	<aside data-markdown class="notes">
+		The DBAs don't have SSH to the servers to access the Docker containers and check their log files.
+		This can make debugging tricky.
+
+		Luckily PostgreSQL can make the logs available as a table that can be inspected via PgAdmin or other tools.
+		This is done by configuring the database to write logs to a CSV file.
+		The file is then mounted as a table using the `file_fdw` foreign data wrapper.
+		
+		The image shows the logs from the server startup process.
+	</aside>
 	</section>
 
 	<section>
@@ -303,12 +328,28 @@ volumes:
   postgis_data:
 		</code></pre>
 		postgresql.conf settings can be overridden at startup
+	<aside data-markdown class="notes">
+		The logging settings are defined in the `postgresql.conf` file.
+		Unfortunately this file is created in the server initialisation step and would be fiddly to change in a running Docker container.
+
+		Fortunately, PostgreSQL allows you to override some configuration parameters via command-line arguements.
+		We can set up the logging by using a custom `command` in the docker-compose file.
+	</aside>
 	</section>
 
 	<section data-background-size="contain" data-background="images/004_add_environments.png">
+	<aside data-markdown class="notes">
+		The ETL process was set up as a scheduled task to migrate new data each day.
+		To ensure that this metadata was created correctly, we used test-driven development (TDD) to write the ETL scripts.
+		This required an extra development database that could be wiped clean repeatedly when the test suite was run.
+		(We could also have done this with a database running on our laptops but not everyone had access to Docker.)
+	</aside>
 	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/005_integration_test.png">
 	<aside data-markdown class="notes">
+		It was easy to create an integration test server and add it to the Ansible hosts list.
+
+		We now have 3 PostgreSQLs.
 	</aside>
 	</section>
 
@@ -407,6 +448,21 @@ hosts: dev
 </section>
 
 <section>
+	<section data-background-size="contain" data-background="images/007_replication_test_desaturated.png">
+		<h4>Take-home messages</h4>
+		<ol>
+			<li>We use Docker and docker-compose to install PostgreSQL</li>
+			<li>Use <i>etlhelper</i> to to simplify data transfer with Python</li>
+			<li>Ansible and GitLab CI are used to deploy to servers</li>
+			<li>PostgreSQL can serve logs as a table using <i>file_fdw</i></li>
+			<li>Flyway runs database configuration via tracked SQL scripts</li>
+			<li>Test-driven development is easier with a dedicated test database</li>
+			<li>pglogical replication is easy to configure and <b>fast</b></li>
+		</ol>
+	<aside data-markdown class="notes">
+		This slide wasn't in the presentation as recorded, but was added later to reiterate the main points.
+	</aside>
+	</section>
 	<section data-background-size="contain" data-background="images/007_replication_test_desaturated.png">
 		<h4>Questions for discussion</h4>
 		<ul>
