@@ -28,6 +28,9 @@
 		<a href="https://www.bgs.ac.uk"><img src="images/BGS-Logo-Pos-RGB.svg" width=400 style="background:white; border:15px solid white; box-shadow:none;"></a>
 		<aside data-markdown class="notes">
 		The aim of this talk is to describe the architecture of BGS Sensor Data Service, the tools that we used to create it and some (hopefully helpful) hints that we learned in the process.
+
+		As the main title suggests, this talk contains some code examples.
+		Don't worry if you don't understand them; I'll explain what each does and the most important thing is to get a sense of how these systems are configured.
 		</aside>
 	</section>
 	<section data-markdown>
@@ -38,6 +41,7 @@
 	<aside data-markdown class="notes">
 		Our approach is different to the cloud-native, Kubernetes-based setups described in the other talks.
 		Hopefully there will time for feedback and discussion at the end.
+
 	</aside>
 	</section>
 </section>
@@ -376,12 +380,51 @@ volumes:
 ...
 		</pre></code>
 		Flyway is used to apply SQL scripts to configure databases
+	<aside data-markdown class="notes">
+		Flyway is an open source tool providing "version control for databases".
+		It can run a series of SQL scripts against a remote server sequentially.
+		We run it in our configuration pipeine from GitLab CI.
+
+		The clever part about Flyway is that it records metadata about which have been run so they can be skipped the next time.
+		It also stores a checksum for each file so it can see if the contents have changed.
+
+		The files above contain the SQL scripts for creating the job loggins tables and more.
+		Those in the `common` directory are run against all servers.
+		There are also folders with specific configuration for individual servers.
+		These are used to set up `pglogical` replication, as we will see later.
+	</aside>
 	</section>
 	
 	<section data-background-size="contain" data-background="images/005_integration_test.png">
+	<aside data-markdown class="notes">
+		The next step is to add a Public environment and redundancy for each server.
+	</aside>
 	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/006_add_replication.png">
 	<aside data-markdown class="notes">
+		There are three big changes to notice here.
+
+		Firstly, we have added a Public environment.
+		Not all the data are for public consumption.
+		Some belong to other projects and others need to undergo checking before release.
+		The Public environment allows us to publish a subset of the data.
+
+		Secondly, there are now pairs of servers in each environment.
+		The external network access to the servers balances the load between them, giving us redundancy.
+		We are not Google and do not expect millions of hits, however it is important to keep the sensor data service running when a server needs to reboot to apply a kernel update.
+
+		Thirdly, the new sensors are being populated via `pglogical` from the internal server and not via `etlhelper`.
+		Populating the database via the API can be slow and, because the API calls happen asynchronously, they can result in data objects arriving in different orders and receiving differet internal ids.
+		(We also store the Oracle ID on each object, so we could track it back, but it is still better if they match).
+
+		`pglogical` is on open source Logical Replication extension for PostgreSQL.
+		It provides an easy to way synchronise data tables and thus populate the data without using the API.
+		It is easy to configure and almost instantaneous.
+		As a bonus using the API on the subscriber services means it can be made read-only, which increases security.
+
+		A row filter on the `frost_public` replication set ensures that we only publish the public data.
+
+		We now have 6 PostgreSQLs.
 	</aside>
 	</section>
 
@@ -397,21 +440,42 @@ SELECT pglogical.replication_set_add_table(
 	set_name := 'frost_public',
 	relation := '"DATASTREAMS"',
 	row_filter := ' "PROPERTIES" ->> ''publish_yn'' = ''Y'' ');
-	</pre></code>
+		</pre></code>
 	pglogical replication is configured via SQL commands
+	<aside data-markdown class="notes">
+		The commands above demonstrate SQL commands for configuring `pglogical`
+		Each server has to be created as a "node".
+		Replication sets are defined on the publisher nodes.
+
+		Subscriber nodes are configured by passing connection details to publishing server and the name of the replica set.
+
+		We use Flyway to run these configuration scripts.
+	</aside>
 	</section>
 
 	<section data-background-size="contain" data-background="images/006_add_replication.png">
+	<aside data-markdown class="notes">
+		It could be risky to make changes to replication sets on the live environments.
+		It would be useful to be able to test these in development.
+	</aside>
 	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/007_replication_test.png">
 	<aside data-markdown class="notes">
+		Here we have added a third development server.
+		We have also added a second PostgreSQL database in each server.
+		This allows us to use Dev2 and Dev3 to test the replication scripts.
+
+		In this case we didn't need to add a whole extra server, we just add a new database to the existing PostgreSQL clusters.
+		The new databases are created by copying the main database as soon as the tables have been created by FROST.
+		At this point they are empty and available for futher configuration with Flyway.
+
+		We now have 10 PostgreSQLs.  I think that's enough.
 	</aside>
 	</section>
 
 	<section>
 		<pre><code data-trim>
 # Create database, stopping here if it already exists
-
 if psql -U frost_db_superuser -d frost_db \
     -c "CREATE DATABASE frost_db2 WITH OWNER frost_db_superuser;"
 then
@@ -430,6 +494,14 @@ psql -U frost_db_superuser -d frost_db2 -f /tmp/frost_db.sql
 rm /tmp/frost_db.sql
 		</pre></code>
 	An idempotent script to clone a running database
+	<aside data-markdown class="notes">
+		This is the script used to clone the database during the pipeline.
+
+		It is important that the script is idempotent as it will be run each the time CI pipeline runs, yet it only needs to create the database once.
+		The first part of the script exits without error if the database already exists.
+
+		The second part of the script uses `pg_dump` to backup the main database, the `psql` to apply the configuration.
+	</aside>
 	</section>
 
 	<section>
@@ -443,6 +515,11 @@ hosts: dev
         chdir: "{{ deploy_dir }}"
 		</pre></code>
 	Storing script in container keeps CI logic clean
+	<aside data-markdown class="notes">
+		One final tip: we found it was cleaner to write the script and to bake it into the database container than to try to execute the commands directly from the CI pipeline code.
+
+		This code snippet shows the Ansible task that runs the script against the servers in the `dev` group.
+	</aside>
 	</section>
 
 </section>
@@ -471,6 +548,12 @@ hosts: dev
 			<li>What are the pros/cons of using a database pool?</li>
 			<li>What if we had to pay by the minute for servers?</li>
 		</ul>
+	<aside data-markdown class="notes">
+		+ I don't think that 10 is too many.  When they are defined in code they are easy and quick to create and having all the different environments gives us a lot of flexibility in testing.
+		+ I was really impressed by how fast and simple `pglogical` was.  I could imagine a situation where you could write the results of a complex join into a table and have it replicated out somewhere else to be used.
+		+ This setup is simple e.g. one database and one API, paired on each server.  You could also use `pgbouncer` to pool the two databases, then have as many API servers as you want pointed at that.  Unless traffic is very high, I'm not sure that it would justify the extra complexity.
+		+ It is cheap for us to have servers that run all the time but under minimal load.  If you have to reduce the server count, you could run multiple PostgreSQL clusters on a server on different ports, but you still need enough for redundancy after reboots.  Are there any other ways to consolidate them?
+	</aside>
 	</section>
 	<section>
 		<h4>Thank you</h4>
