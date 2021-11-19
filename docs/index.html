@@ -41,11 +41,11 @@
 		<li>Multi-environments and replication</li>
 		<li>Questions for discussion</li>
 		</ul>
-	<aside data-markdown class="notes">
-		Our approach is different to the cloud-native, Kubernetes-based setups described in the other talks.
-		Hopefully there will time for feedback and discussion at the end.
+		<aside data-markdown class="notes">
+			Our approach is different to the cloud-native, Kubernetes-based setups described in the other talks.
+			Hopefully there will time for feedback and discussion at the end.
 
-	</aside>
+		</aside>
 	</section>
 </section>
 
@@ -134,6 +134,9 @@
 	</section>
 
 	<section data-background-size="contain" data-background="images/001_just_postgres.png">
+	<aside data-markdown class="notes">
+		Of course the application is more than just a database...
+	</aside>
 	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/002_single_vm.png">
 	<aside data-markdown class="notes">
@@ -423,9 +426,9 @@ volumes:
 		Populating the database via the API can be slow and, because the API calls happen asynchronously, they can result in data objects arriving in different orders and receiving differet internal ids.
 		(We also store the Oracle ID on each object, so we could track it back, but it is still better if they match).
 
-		`pglogical` is on open source Logical Replication extension for PostgreSQL.
+		`pglogical` is an open source Logical Replication extension for PostgreSQL.
 		It provides an easy to way synchronise data tables and thus populate the data without using the API.
-		It is easy to configure and almost instantaneous.
+		It is easy to configure and data transfer is almost instantaneous.
 		As a bonus using the API on the subscriber services means it can be made read-only, which increases security.
 
 		A row filter on the `frost_public` replication set ensures that we only publish the public data.
