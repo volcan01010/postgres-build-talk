@@ -27,7 +27,7 @@
 		</p>
 		<a href="https://www.bgs.ac.uk"><img src="images/BGS-Logo-Pos-RGB.svg" width=400 style="background:white; border:15px solid white; box-shadow:none;"></a>
 		<aside data-markdown class="notes">
-		The aim of this talk is to describe architecture of BGS Sensor Data Service and some of the features/tools that we used to create it.
+		The aim of this talk is to describe architecture of BGS Sensor Data Service, the tools that we used to create it and some hopefully helpful hints that we learned in the process.
 		</aside>
 	</section>
 	<section data-markdown>
@@ -36,6 +36,10 @@
 		+ Multi-environments and replication
 		+ Questions for discussion
 	</section>
+		<aside data-markdown class="notes">
+		Our approach is different to the cloud-native, Kubernetes-based setups described in the other talks.
+		Hopefully there will time for feedback and discussion on it at the end.
+		</aside>
 </section>
 
 <section>
@@ -48,7 +52,8 @@
 		and contributions to standards for data sharing e.g. <a href="https://www.bgs.ac.uk/news/geosciml-data-standard-becomes-official/">GeoSciML</a></li>
 		</ul>
 	<aside data-markdown class="notes">
-		650 staff, 70 in Digital are professional software developers and database experts.
+		We have 650 staff, 70 in Digital are professional software developers and database experts.
+		This service is part of our recent approach of increasingly sharing data via APIs.
 	</aside>
 	</section>
 
@@ -59,21 +64,46 @@
 		<li>Long-standing corporate Oracle database</li>
 		<li>Increasing use of PostgreSQL for microservices and collaborative projects</li>
 		</ul>
+	<aside data-markdown class="notes">
+		Self-hosting our VMs means that we do not pay per minute; it is not expensive to run multiple servers with low loads.
+		Microservices often bring their own PostgreSQL databases as part of the software stack.
+		If we use PostgreSQL, we can share workflows with partners in academia or countries such as Kyrgyzstan and Uganda.
+	</aside>
 	</section>
 
 	<section>
 		<img class="stretch" src="images/glasgow_main_mine_working.png">
 		<a href="https://ukgeos.ac.uk/observatories/glasgow">UK Geoenergy Observatories</a>
+	<aside data-markdown class="notes">
+		For the UKGEOS project, we have placed instruments down boreholes to create natural laboratories.
+		UKGEOS Glasgow is investigating the use of water in abandoned coal mines to heat homes in a similar way to a ground source heat pump.
+	</aside>
 	</section>
 
 	<section>
 		<img class="stretch" src="images/sensor_data_graph.png">
 		<a href="https://sensors.bgs.ac.uk">sensors.bgs.ac.uk</a>
+	<aside data-markdown class="notes">
+		The BGS Sensor Data Service allows the data to be accessed via an api.
+		It is powered by FROST-Server, which is an open-source project serving the data via the Open Geospatial Consortium's SensorThings API standard.
+
+		+ [API root](https://sensors.bgs.ac.uk/FROST-Server/v1.1)
+		+ [Observed properties include water temperature](https://sensors.bgs.ac.uk/FROST-Server/v1.1/ObservedProperties)
+		+ [Datastreams for water temperature in different locations](https://sensors.bgs.ac.uk/FROST-Server/v1.1/ObservedProperties(3)/Datastreams)
+		+ [Observations for borehole GGA07](https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(20)/Observations)
+
+		The water temperature is around 11°C.
+	</aside>
 	</section>
 </section>
 
 <section>
 	<section data-background-size="contain" data-background="images/001_just_postgres.png">
+	<aside data-markdown class="notes">
+		This is a PostgreSQL conference, so we should centre the talk around PostgreSQL.
+		I like it because it is easy to create many instances, which gives flexiblity and scope for test environments.
+		You will see this as the talk goes on.
+	</aside>
 	</section>
 
 	<section>
@@ -84,12 +114,22 @@
 		<li>Cluster settings are applied (e.g. pg_hba.conf) with setup scripts</li>
 		<li>Configuration stored in /var/lib/postgres/data</li>
 		</ul>
+	<aside data-markdown class="notes">
+		Docker is an easy way to install PostgreSQL.
+		You can define scripts that are run when the container starts for the first time.
+		These can be used to configure things such as the `pg_hba.conf`, which controls who can connect.
+		All those settings are stored in `/var/lib/postgres/data`.
+		Mounting `/var/lib/postgres/data` as a volume provides persistent data between changes to the container.
+	</aside>
 	</section>
 
 	<section data-background-size="contain" data-background="images/001_just_postgres.png">
 	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/002_single_vm.png">
 	<aside data-markdown class="notes">
+		The runner services comprises a PostgreSQL database and FROST-Server instance running on a virtual machine.
+		We use docker-compose to start the services together.
+		FROST-Server connects to the database and creates the tables that it needs using Liquibase.
 	</aside>
 	</section>
 
@@ -123,6 +163,12 @@ volumes:
   postgis_data:
 		</code></pre>
 		docker-compose.yml
+	<aside data-markdown class="notes">
+		The docker-compose file describes the database (db) and FROST services.
+		For the database, note the environment variables used to configure the superuser account and the volume to ensure that data persist.
+		For the FROST Server, note the same credentials and the custom command to run when the container starts.
+		This command ensures that the database is ready before FROST tries to create the tables.
+	</aside>
 	</section>
 
 	<section>
@@ -142,6 +188,11 @@ sleep 2  # Allow another 2 seconds for it to self-configure
 exec $cmd
 		</code></pre>
 		wait_for_postgres.sh
+	<aside data-markdown class="notes">
+		The `wait_for_postgres.sh` script captures the arguments passed to it in the `$cmd` variable.
+		It then loops over a call to `psql -c '\q'`, which simply tries to connect to the database then quit.
+		After the command succeeds, it calls `exec $cmd` to run the command in the remaining arguments.
+	</aside>
 	</section>
 
 	<section>
@@ -172,12 +223,37 @@ exec $cmd
     recreate: always
 		</code></pre>
 		deploy.yml (Ansible playbook)
+	<aside data-markdown class="notes">
+		We use Ansible to deploy the application and database to the server.
+		Ansible is a server-configuration tool that can SSH onto a target machine and run scripts there.
+		The scripts are declarative, so they define the end state rather than the stops to get there.
+		They are also idempotent, which means they can be run repeatedly and always give the same result.
+
+		The scripts copy across the `docker-compose.yml` file and create a `.env` file containing the environment variables.
+		They then call `docker-compose up` to start the service.
+
+		We have an extra step to reset the database, which can be triggered via an environment variable.
+		This will drop the data volume and give us a fresh start when the service starts.
+	</aside>
 	</section>
 
 	<section data-background-size="contain" data-background="images/002_single_vm.png">
+	<aside data-markdown class="notes">
+		Once our service is running, we need to populate it with some data.
+	</aside>
 	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/003_single_vm_and_etl.png">
 	<aside data-markdown class="notes">
+		The sensor data are stored in the corporate Oracle database, where they are highly normalised and integrated with other internal data structures.
+		We wrote a custom Python tool called `etlhelper` to transfer the data to the FROST servers.
+		`etlhelper` solves two problems:
+
+		+ It installs and configures the Oracle Instant Client on Linux, which can be a bit fiddly
+		+ It provides a simple way to run a SQL query against a database and get the results back using Python
+
+		`etlhelper` runs a query against Oracle and then posts the results to the FROST server via the API.
+		Using the API allows FROST to take care of all the internal foreign table relationships.
+		The asynchronous `aiohttp` Python library made inserting data much quicker.
 	</aside>
 	</section>
 
@@ -185,6 +261,12 @@ exec $cmd
 		<blockquote>etlhelper is a Python library to simplify data transfer between databases</blockquote>
 		<img class="stretch" src="images/etlhelper_image.png">
 		<a href="https://github.com/BritishGeologicalSurvey/etlhelper">https://github.com/BritishGeologicalSurvey/etlhelper</a>
+	<aside data-markdown class="notes">
+		`etlhelper` is aimed at anyone who just wants to run a SQL query against a database and insert the results into another one.
+		In the example above, it copies the data from the "src" table on "conn1" to the "exported" table on "conn2".
+		Behind the scenes it handles things like cursors and transactions and transferring the data in chunks so that it doesn't take up too much space in memory.
+		We open-sourced `etlhelper` two years ago, so you can look at it on GitHub and install it using `pip`.
+	</aside>
 	</section>
 </section>
 
