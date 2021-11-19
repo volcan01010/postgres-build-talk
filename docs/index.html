@@ -65,8 +65,8 @@
 	</section>
 
 	<section>
-		<h4>UKGEOS</h4>
-
+		<img class="stretch" src="images/glasgow_main_mine_working.png">
+		<a href="https://ukgeos.ac.uk/observatories/glasgow">UK Geoenergy Observatories</a>
 	<aside data-markdown class="notes">
 		Change comes from the senior developer level as they are using the code day-to-day.
 		BGS hired senior developers with explicit interest in open source software.
@@ -74,7 +74,8 @@
 	</section>
 
 	<section>
-		<h4>FROST Server</h4>
+		<img class="stretch" src="images/sensor_data_graph.png">
+		<a href="https://sensors.bgs.ac.uk">sensors.bgs.ac.uk</a>
 
 	<aside data-markdown class="notes">
 		Change comes from the senior developer level as they are using the code day-to-day.
@@ -86,46 +87,130 @@
 <section>
 	<section data-background-size="contain" data-background="images/001_just_postgres.png">
 	<aside data-markdown class="notes">
-		[Coding in the Open](https://gds.blog.gov.uk/2017/09/04/the-benefits-of-coding-in-the-open/) GDS blog post.
 	</aside>
 	</section>
 
+	<section>
+		<pre><code data-trim data-line-numbers="2,10,11,13,21,25,26">
+services:
+  db:
+    image: .../frost-db:${FROST_DB_TAG}
+    ...
+    environment:
+      POSTGRES_DB: frost_db
+      POSTGRES_USER: ${FROST_DB_USER}
+      POSTGRES_PASSWORD: ${FROST_DB_PASSWORD}
+    ...
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+
+  frost:
+    image: .../frost-server:${FROST_API_TAG}
+    ...
+    environment:
+      ...
+      - persistence_db_url=jdbc:postgresql://db:5432/frost_db
+      - persistence_db_username=${FROST_DB_USER}
+      - persistence_db_password=${FROST_DB_PASSWORD}
+    command: ["/wait_for_postgis.sh", "catalina.sh", "run"]
+    depends_on:
+      - db
+
+volumes:
+  postgis_data:
+		</code></pre>
+	</section>
+
+	<section data-background-size="contain" data-background="images/001_just_postgres.png">
+	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/002_single_vm.png">
 	<aside data-markdown class="notes">
 	</aside>
 	</section>
 
+	<section>
+		docker-compose.yml
+	</section>
+
+	<section>
+		Wait for postgresql.sh
+	</section>
+
+	<section data-background-size="contain" data-background="images/002_single_vm.png">
+	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/003_single_vm_and_etl.png">
 	<aside data-markdown class="notes">
 	</aside>
 	</section>
+
+	<section data-markdown>
+		<textarea data-template>
+```bash65chars
+
+             ----------------------------------
+            |       pip install etlhelper      |
+             ----------------------------------
+                   \   ^__^
+                    \  (oo)\_______
+                       (__)\       )\/\
+                           ||----w |
+                           ||     ||
+
+
+```
+		</textarea>
+	</section>
 </section>
 
 <section>
+	<section data-background-size="contain" data-background="images/003_single_vm_and_etl.png">
+	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/004_add_environments.png">
 	<aside data-markdown class="notes">
 	</aside>
 	</section>
 
+	<section>
+		logs in the database, docker-compose for command lines options
+	</section>
+
+	<section data-background-size="contain" data-background="images/004_add_environments.png">
+	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/005_integration_test.png">
 	<aside data-markdown class="notes">
 	</aside>
 	</section>
+
+	<section>
+		Flyway to add jobs table; extra database for integration tests
+	</section>
 	
+	<section data-background-size="contain" data-background="images/005_integration_test.png">
+	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/006_add_replication.png">
 	<aside data-markdown class="notes">
 	</aside>
 	</section>
 
+	<section>
+		pglogical filters
+	</section>
+
+	<section data-background-size="contain" data-background="images/006_add_replication.png">
+	</section>
 	<section data-transition="fade-in" data-background-size="contain" data-background="images/007_replication_test.png">
 	<aside data-markdown class="notes">
 	</aside>
+	</section>
+
+	<section>
+		Duplicate running databases
 	</section>
 </section>
 
 <section>
 	<section>
-	Lessons learned
+	Is nine Postgres too many?
 	</section>
 	<section>
 	Questions
@@ -145,6 +230,8 @@
 			// - https://revealjs.com/config/
 			Reveal.initialize({
 				hash: true,
+				width: 1152,
+				height: 840,
 
 				// Learn about plugins: https://revealjs.com/plugins/
 				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
