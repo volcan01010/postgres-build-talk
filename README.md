@@ -1,6 +1,6 @@
-# How many postgres is too many?
+# How many Postgres is too many?
 
-Talk for [https://www.postgresbuild.com/](PostgreSQL Build Conference), 1 December 2021.
+Talk for [PostgreSQL Build Conference](https://www.postgresbuild.com), 1 December 2021.
 
 The slides are rendered online at:
 [https://volcan01010.github.io/postgres-build-talk/index.html](https://volcan01010.github.io/postgres-build-talk/index.html).
