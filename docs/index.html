@@ -130,6 +130,7 @@
 		Docker is an easy way to install PostgreSQL.
 		You can define scripts that are run when the container starts for the first time.
 		These can be used to configure things such as the `pg_hba.conf`, which controls who can connect.
+		They also configure the Write Ahead Log for replication.
 		All those settings are stored in `/var/lib/postgres/data`.
 		Mounting `/var/lib/postgres/data` as a volume provides persistent data between changes to the container.
 	</aside>
